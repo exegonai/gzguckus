@@ -1,11 +1,19 @@
 <?php
 /* =========================================================
    Gizem Genç Üçkuş — İletişim formu
-   Mesajı info@ adresine iletir. Mesaj ve ziyaretçi bilgisi sunucuda saklanmaz.
+   Mesajı form@ posta kutusuyla giriş yaparak info@ adresine iletir.
+   Mesaj ve ziyaretçi bilgisi sunucuda saklanmaz.
+   Şifre web kökünün dışındaki form-sifre.txt dosyasındadır. Dosya yoksa veya
+   giriş başarısızsa mesaj kaybolmasın diye sunucunun mail() işlevi kullanılır.
    Sayaç dosyası yalnızca saatlik toplam gönderim sayısını tutar.
    ========================================================= */
 
 const HEDEF = 'info@fizyoterapistgizemgencuckus.com';
+const GONDEREN = 'form@fizyoterapistgizemgencuckus.com';
+const ALAN_ADI = 'fizyoterapistgizemgencuckus.com';
+const SMTP_SUNUCU = 'smtp.hostinger.com';
+const SMTP_PORT = 465;
+const BOS_SIFRE = 'sifreyi-buraya-yapistir';
 const SAATLIK_SINIR = 30;
 
 ini_set('display_errors', '0');
@@ -64,6 +72,65 @@ function sinirAsildi()
     return $asildi;
 }
 
+function smtpSifresi()
+{
+    $dosya = dirname(__DIR__) . '/form-sifre.txt';
+    $sifre = is_readable($dosya) ? trim((string) file_get_contents($dosya)) : '';
+    return $sifre === BOS_SIFRE ? '' : $sifre;
+}
+
+function smtpYanit($baglanti)
+{
+    $satir = '';
+    while (($parca = fgets($baglanti, 1024)) !== false) {
+        $satir = $parca;
+        if (strlen($parca) < 4 || $parca[3] !== '-') {
+            break;
+        }
+    }
+    return (int) substr($satir, 0, 3);
+}
+
+// Kayda yalnızca başarısız adımın numarası yazılır; şifre ve mesaj yazılmaz.
+function smtpGonder($sifre, $ileti)
+{
+    $baglam = stream_context_create(array('ssl' => array('verify_peer' => true, 'verify_peer_name' => true)));
+    $baglanti = @stream_socket_client('ssl://' . SMTP_SUNUCU . ':' . SMTP_PORT, $hataNo, $hataMetni, 10, STREAM_CLIENT_CONNECT, $baglam);
+    if (!$baglanti) {
+        error_log('form smtp: baglanti kurulamadi');
+        return false;
+    }
+    stream_set_timeout($baglanti, 10);
+
+    $adimlar = array(
+        array('EHLO ' . ALAN_ADI, array(250)),
+        array('AUTH LOGIN', array(334)),
+        array(base64_encode(GONDEREN), array(334)),
+        array(base64_encode($sifre), array(235)),
+        array('MAIL FROM:<' . GONDEREN . '>', array(250)),
+        array('RCPT TO:<' . HEDEF . '>', array(250, 251)),
+        array('DATA', array(354)),
+        array($ileti . "\r\n.", array(250)),
+    );
+
+    $tamam = smtpYanit($baglanti) === 220;
+    foreach ($adimlar as $sira => $adim) {
+        if (!$tamam) {
+            break;
+        }
+        fwrite($baglanti, $adim[0] . "\r\n");
+        $tamam = in_array(smtpYanit($baglanti), $adim[1], true);
+        if (!$tamam) {
+            error_log('form smtp: adim ' . $sira . ' basarisiz');
+        }
+    }
+    if ($tamam) {
+        fwrite($baglanti, "QUIT\r\n");
+    }
+    fclose($baglanti);
+    return $tamam;
+}
+
 if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Allow: POST');
     yanit(405, false, 'Bu adres yalnızca iletişim formundan kullanılır.');
@@ -106,6 +173,26 @@ $satirlar = array($mesaj, '', '---', 'Ad Soyad: ' . $ad, 'E-posta: ' . $eposta);
 if ($telefon !== '') {
     $satirlar[] = 'Telefon: ' . $telefon;
 }
+$govde = chunk_split(base64_encode(implode("\n", $satirlar)));
+
+$sifre = smtpSifresi();
+$gitti = $sifre !== '' && smtpGonder($sifre, implode("\r\n", array(
+    'Date: ' . date('r'),
+    'From: Web Sitesi <' . GONDEREN . '>',
+    'To: <' . HEDEF . '>',
+    'Reply-To: ' . $eposta,
+    'Subject: ' . mb_encode_mimeheader($konu, 'UTF-8', 'B', "\r\n", 9),
+    'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . ALAN_ADI . '>',
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    rtrim($govde),
+)));
+if ($gitti) {
+    yanit(200, true, 'Mesajınız bize ulaştı. Teşekkür ederiz.');
+}
+
 $basliklar = array(
     'From: Web Sitesi <' . HEDEF . '>',
     'Reply-To: ' . $eposta,
@@ -117,7 +204,7 @@ $basliklar = array(
 $gitti = mail(
     HEDEF,
     '=?UTF-8?B?' . base64_encode($konu) . '?=',
-    chunk_split(base64_encode(implode("\n", $satirlar))),
+    $govde,
     implode("\r\n", $basliklar),
     '-f' . HEDEF
 );
