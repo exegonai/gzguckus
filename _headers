@@ -1,0 +1,28 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://platform.docplanner.com https://www.doktortakvimi.com 'sha256-La0q937ru7PcBwS5BnND1NS1v57TXso0vnkf1iQRFLI=' 'sha256-X37EIawGTnKCpMGIPjOxew8d/nBoSMmZqe80PpBo9IM='; style-src 'self' 'unsafe-inline' https://platform.docplanner.com; img-src 'self' data: https://platform.docplanner.com https://www.doktortakvimi.com; font-src 'self'; media-src 'self'; connect-src 'self' https://platform.docplanner.com https://www.doktortakvimi.com; frame-src https://www.doktortakvimi.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self' mailto:; frame-ancestors 'self'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000
+
+/
+  Cache-Control: no-cache
+
+/*.html
+  Cache-Control: no-cache
+
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/img/*
+  Cache-Control: public, max-age=2592000
+
+/assets/video/*
+  Cache-Control: public, max-age=2592000

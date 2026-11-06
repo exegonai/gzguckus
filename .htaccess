@@ -1,0 +1,57 @@
+# derle.py tarafından üretildi, elle değiştirmeyin.
+Options -Indexes
+AddDefaultCharset UTF-8
+AddType font/woff2 .woff2
+AddType video/mp4 .mp4
+
+ErrorDocument 404 /404.html
+ErrorDocument 500 /500.html
+ErrorDocument 503 /503.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # .git ve diğer noktalı yollar dışarı açılmaz
+  RewriteRule (^|/)\.(?!well-known/) - [R=404,L]
+
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://fizyoterapistgizemgencuckus.com%{REQUEST_URI} [R=301,L]
+
+  RewriteCond %{HTTP_HOST} !^fizyoterapistgizemgencuckus\.com$ [NC]
+  RewriteRule ^ https://fizyoterapistgizemgencuckus.com%{REQUEST_URI} [R=301,L]
+
+  RewriteCond %{THE_REQUEST} \s/index\.html[\s?]
+  RewriteRule ^index\.html$ / [R=301,L]
+
+  # Bakım: site köküne .bakim adlı boş dosya koyunca tüm sayfalar 503 döner
+  RewriteCond %{DOCUMENT_ROOT}/.bakim -f
+  RewriteCond %{REQUEST_URI} !^/(503\.html|css/|assets/)
+  RewriteRule ^ - [R=503,L]
+</IfModule>
+
+<FilesMatch "^(\.|_headers$|_redirects$|derleme-raporu)">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://platform.docplanner.com https://www.doktortakvimi.com 'sha256-La0q937ru7PcBwS5BnND1NS1v57TXso0vnkf1iQRFLI=' 'sha256-X37EIawGTnKCpMGIPjOxew8d/nBoSMmZqe80PpBo9IM='; style-src 'self' 'unsafe-inline' https://platform.docplanner.com; img-src 'self' data: https://platform.docplanner.com https://www.doktortakvimi.com; font-src 'self'; media-src 'self'; connect-src 'self' https://platform.docplanner.com https://www.doktortakvimi.com; frame-src https://www.doktortakvimi.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self' mailto:; frame-ancestors 'self'; upgrade-insecure-requests"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header set Cache-Control "no-cache"
+  <FilesMatch "\.(css|js|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(webp|png|jpe?g|svg|mp4)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml text/plain application/xml
+</IfModule>
+
+
+AddType application/manifest+json .webmanifest
